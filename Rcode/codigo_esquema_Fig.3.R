@@ -1,9 +1,9 @@
 #######################################################################
-# Codigo esquema paper soja Frontiers in Plants Science               ##
+# Codigo esquema paper modelo de consumo de agua en soja              ##
 # Datos  Soja estres hidrico en Cámara de crecimiento                 ##
 # Datos tomados por Esteban Casaretto                                 ##
 # Sebastian Simondi - Gaston Quero                                    ##
-# 13-07-2018                                                          ##
+# 14-06-2020                                                          ##
 ########################################################################
 
 getwd ()
