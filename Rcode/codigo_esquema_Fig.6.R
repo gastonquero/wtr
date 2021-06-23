@@ -1,16 +1,14 @@
-###########################################################
 #######################################################################
-# Codigo esquema paper soja Frontiers in Plants Science               #
-# Datos  Soja estres hidrico en Cámara de crecimiento                 #
-# Datos tomados por Esteban Casaretto                                 #
-# Modelizacion de ET y Gw de la poblacion DM6.8 x SO76557             #
-#                                                                     #
+# Codigo esquema paper modelo de consumo de agua en soja              ##
+# Datos  Soja estres hidrico en Cámara de crecimiento                 ##
+# Datos tomados por Esteban Casaretto                                 ##
 # Sebastian Simondi - Gaston Quero                                    ##
-# 29-08-2018                                                          ##
+# 14-06-2020                                                          ##
 ########################################################################
 
 getwd ()
-setwd ("D:/Paper_Soja_FPS")
+setwd ("R:/wtr")
+
 
 # Paquetes 
 library (lme4)
@@ -66,45 +64,49 @@ tm.DMSO.nq.75 <- pred.model.geno.DMSO.123 %>%
             arrange (tm)
 
 
-PCA.DMSO <- rbind (tm.DMSO.nq.25,
+PCA.DMSO.tm <- rbind (tm.DMSO.nq.25,
                    tm.DMSO.nq.25.75, 
                    tm.DMSO.nq.75)
 
-# PCA con la matrices del 
-PCA.DMSO.a <- PCA.DMSO %>%
-              select(-c (datos.essay.1., pot, pred.rsq, k.eq.07, B.eq.07, 
+### exporto los datos ######
+
+
+write_delim (PCA.DMSO.tm ,file ="./Data/procdata/PCA.DMSO.tm.txt" ,
+             delim = ",", na = "NA")
+
+
+
+# Selecciono las variables que voy a usar
+PCA.DMSO.tm.a <- PCA.DMSO.tm %>%
+                  dplyr::select(-c (datos.essay.1., pot, pred.rsq, k.eq.07, B.eq.07, 
                          k.eq.xy, B.eq.xy, tm.AR, clust.tm, tm, ks))
 
-G88.DMSO.pca.1 <- PCA ( PCA.DMSO.a, scale.unit = TRUE, ncp = 2, ind.sup = NULL, 
+### Hago el PCA  ############
+G88.DMSO.pca <- PCA ( PCA.DMSO.tm.a , scale.unit = TRUE, ncp = 2, ind.sup = NULL, 
                       quanti.sup = NULL, quali.sup =1, row.w = NULL, 
                       col.w = NULL, graph = FALSE)
 
-plot (G88.DMSO.pca.1, choix = c("ind"))
-plot (G88.DMSO.pca.1, choix = c("var"), title ="PCA_88_DMSO")
+## contribucion de las DIM 
+eig.val.G88.DMSO <- get_eigenvalue (G88.DMSO.pca)
+eig.val.G88.DMSO
 
+## contribucion de las variables a las DIM
+# Contributions to the principal components
+(contrib <- G88.DMSO.pca$var$contrib)
 
-print (G88.DMSO.pca.1)
+### Plot de la contribucion de la dimensiones 
+fviz_eig (G88.DMSO.pca, addlabels = TRUE, ylim = c(0, 50))
 
-
-eig.val.G88.DMSO.1 <- get_eigenvalue (G88.DMSO.pca.1)
-eig.val.G88.DMSO.1
-
-contrib <- G88.DMSO.pca.1$var$contrib
-
-### contribucion de la dimensiones 
-fviz_eig (G88.DMSO.pca.1, addlabels = TRUE, ylim = c(0, 50))
-
-var.pheno.G88.DMSO <- get_pca_var (G88.DMSO.pca.1)
+var.pheno.G88.DMSO <- get_pca_var (G88.DMSO.pca)
 var.pheno.G88.DMSO
 
-# Coordinates
+# Coordenadas de las variables
 head (var.pheno.G88.DMSO$coord)
 
 # Cos2: quality on the factore map
 head (var.pheno.G88.DMSO$cos2)
 
-# Contributions to the principal components
-head (var.pheno.G88.DMSO$contrib)
+
 
 # importante para enteder el PCA
 # 1. Positively correlated variables are grouped together.
@@ -116,18 +118,6 @@ head (var.pheno.G88.DMSO$contrib)
 #    represented on the factor map.
 
 
-corrplot (var.pheno.G88.DMSO$cos2, is.corr=FALSE)
-str(pheno)
-
-fviz_pca_var (G88.DMSO.pca.1, col.var = "cos2",
-              gradient.cols = c("navy","orange",  "darkred"),
-              repel = TRUE # Avoid text overlapping
-)
-
-
-fviz_pca_var (G88.DMSO.pca.1, alpha.var = "cos2")
-
-
 # Variables that are correlated with PC1 (i.e., Dim.1) and PC2 (i.e., Dim.2) 
 #  are the most important in
 #  explaining the variability in the data set.
@@ -137,25 +127,25 @@ fviz_pca_var (G88.DMSO.pca.1, alpha.var = "cos2")
 # with low contribution and might be removed to 
 # simplify the overall analysis.
 
-head(var.pheno$contrib, 10)
-
 # The larger the value of the contribution, 
 # the more the variable contributes to the component.
 
-# Contributions of variables to PC1
+# Plot Contributions of variables to PC1
 fviz_contrib (G88.DMSO.pca.1, choice = "var", axes = 1, top = 19)
 
-# Contributions of variables to PC2
+# plot Contributions of variables to PC2
 fviz_contrib (G88.DMSO.pca.1, choice = "var", axes = 2, top = 19)
 
 # Create a grouping variable using kmeans
 # Create 3 groups of variables (centers = 3)
 set.seed(123)
-res.km <- kmeans (var.pheno$coord, centers = 3 , nstart = 25)
-grp <- as.factor(res.km$cluster)
 
-# Color variables by groups
-fviz_pca_var (G88.DMSO.pca.1, col.var = grp,
+res.km.G88.DMSO <- kmeans (var.pheno.G88.DMSO$coord, centers = 3 , nstart = 25)
+
+grp.G88.DMSO <- as.factor(res.km.G88.DMSO$cluster)
+
+# Plot la agrupacion de variables Color variables by groups
+fviz_pca_var (G88.DMSO.pca, col.var = grp.G88.DMSO,
               repel =TRUE, 
               arrowsize=0.75,
               palette = c("red", "navyblue", "darkgreen"),
@@ -163,25 +153,23 @@ fviz_pca_var (G88.DMSO.pca.1, col.var = grp,
 
 
 ##### individuos
-ind <- get_pca_ind (G88.DMSO.pca.1)
-ind
-fviz_pca_ind (G88.DMSO.pca.1)
+ind.G88.DMSO <- get_pca_ind (G88.DMSO.pca)
+ind.G88.DMSO
 
-G88.DMSO.pca.1$quali
+#fviz_pca_ind (G88.DMSO.pca.1)
 
-fviz_pca_ind (G88.DMSO.pca.1,geom = c("point"),
-              palette = "jco", repel = TRUE)
+
+#fviz_pca_ind (G88.DMSO.pca.1,geom = c("point"),
+ #             palette = "jco", repel = TRUE)
+
 
 # Clustering, auto nb of clusters:
-hc.pheno.G88.DMSO <- HCPC (G88.DMSO.pca.1, nb.clust=-1)
-
-
+hc.pheno.G88.DMSO <- HCPC (G88.DMSO.pca, nb.clust=-1)
 
 clust.pca.pheno.G88.DMSO <- hc.pheno.G88.DMSO$data.clust 
-class (clust.pca.pheno.G88.DMSO)
 
-#View (clust.pca.pheno)
 
+# Plot cluster individuos 
 fviz_pca_ind (G88.DMSO.pca.1,
               geom.ind = "point", # show points only (nbut not "text")
               col.ind = clust.pca.pheno.G88.DMSO$clust, # color by groups
@@ -190,17 +178,23 @@ fviz_pca_ind (G88.DMSO.pca.1,
               legend.title = "Groups")
 
 # ordeno para  fusionar y  exportar
-clust.pca.1.G88.DMSO <- clust.pca.1.G88.DMSO %>%
-                        arrange(genotype)
+
+clust.pca.G88.DMSO <- hc.pheno.G88.DMSO$data.clust 
+
+# ordeno para  fusionar y  exportar
+clust.pca.G88.DMSO <- clust.pca.G88.DMSO %>%
+                      dplyr::arrange(genotype) %>%
+                      dplyr::select (c(genotype, clust))
 
 
-PCA.DMSO <- PCA.DMSO %>%
-            arrange (genotype)
+PCA.DMSO <- PCA.DMSO.tm.a %>%
+            dplyr::arrange (genotype)
 
 PCA.DMSO$genotype == clust.pca.1.G88.DMSO$genotype
 
 prev.CA.DMSO <- PCA.DMSO %>%
-                mutate (clust.PCA = clust.pca.1.G88.DMSO$clust)
+                dplyr::inner_join(clust.pca.G88.DMSO, by= "genotype") %>%
+                dplyr::rename (clust.PCA = clust)
 
 write.table (prev.CA.DMSO, file = "./Data/procdata/prev.CA.DMSO.txt", 
              append = FALSE, quote = TRUE, 
@@ -224,57 +218,119 @@ q75.tm.elite <-  quantile (tm.elite, .75, na.rm = TRUE)
 q50.tm.elite <-  quantile (tm.elite, .50, na.rm = TRUE)
 
 tm.elite.nq.25 <- pred.model.geno.ES.123 %>%
-  filter (tm < q25.tm.elite) %>%
-  mutate (clust.tm = "G1") %>%
-  arrange (tm)
+                  dplyr::filter (tm < q25.tm.elite) %>%
+                  dplyr:: mutate (clust.tm = "G1") %>%
+                  dplyr::arrange (tm)
 
 tm.elite.nq.25.75 <- pred.model.geno.ES.123 %>%
-  filter (tm > q25.tm.elite) %>%
-  filter (tm < q75.tm.elite) %>%
-  mutate (clust.tm = "G2") %>%
-  arrange (tm)
+                     dplyr::filter (tm > q25.tm.elite) %>%
+                     dplyr::filter (tm < q75.tm.elite) %>%
+                     dplyr::mutate (clust.tm = "G2") %>%
+                     dplyr::arrange (tm)
 
 tm.elite.nq.75 <- pred.model.geno.ES.123 %>%
-  filter (tm > q75.tm.elite)%>%
-  mutate (clust.tm = "G3") %>%
-  arrange (tm)
+                  dplyr::filter (tm > q75.tm.elite)%>%
+                  dplyr::mutate (clust.tm = "G3") %>%
+                  dplyr::arrange (tm)
 
 
 PCA.elite <- rbind (tm.elite.nq.25,
                     tm.elite.nq.25.75, 
                     tm.elite.nq.75)
 
-str(PCA.elite)
 # PCA con la matrices del 
 PCA.elite.a <- PCA.elite %>%
                select(-c (essay, pot, pred.rsq, k.eq.07, B.eq.07, 
                 k.eq.xy, B.eq.xy, tm.AR, clust.tm, tm, ks))
 
-G59.elite.pca.1 <- PCA ( PCA.elite.a, scale.unit = TRUE, ncp = 2, ind.sup = NULL, 
+G59.elite.pca <- PCA ( PCA.elite.a, scale.unit = TRUE, ncp = 2, ind.sup = NULL, 
                         quanti.sup = NULL, quali.sup =1, row.w = NULL, 
                         col.w = NULL, graph = FALSE)
 
-plot (G59.elite.pca.1, choix = c("ind"))
+plot (G59.elite.pca, choix = c("ind"))
 
-plot (G59.elite.pca.1, choix = c("var"), title ="PCA_59_elite")
+plot (G59.elite.pca, choix = c("var"), title ="PCA_59_elite")
 
 
-hc.2 <- HCPC (G59.elite.pca.1, nb.clust=-1)
+## contribucion de las DIM 
+eig.val.G59.elite <- get_eigenvalue (G59.elite.pca)
+eig.val.G59.elite
 
-clust.pca.1.G59.elite <- hc.2$data.clust 
+## contribucion de las variables a las DIM
+# Contributions to the principal components
+(contrib <- G59.elite.pca$var$contrib)
 
-# ordeno para  fucionar y  exportar
-clust.pca.1.G59.elite <- clust.pca.1.G59.elite %>%
-  arrange (genotype)
+### Plot de la contribucion de la dimensiones 
+fviz_eig (G59.elite.pca, addlabels = TRUE, ylim = c(0, 65))
+
+var.pheno.G59.elite <- get_pca_var (G59.elite.pca)
+var.pheno.G59.elite
+
+# Coordenadas de las variables
+head (var.pheno.G59.elite$coord)
+
+# Cos2: quality on the factore map
+head (var.pheno.G59.elite$cos2)
+
+# Plot Contributions of variables to PC1
+fviz_contrib (G59.elite.pca, choice = "var", axes = 1, top = 19)
+
+# plot Contributions of variables to PC2
+fviz_contrib (G59.elite.pca, choice = "var", axes = 2, top = 19)
+
+# Create a grouping variable using kmeans
+# Create 3 groups of variables (centers = 3)
+set.seed(123)
+
+res.km.G59.elite <- kmeans (var.pheno.G59.elite$coord, centers = 3 , nstart = 25)
+
+grp.G59.elite <- as.factor(res.km.G59.elite$cluster)
+
+# Plot la agrupacion de variables Color variables by groups
+fviz_pca_var (G59.elite.pca, col.var = grp.G59.elite,
+              repel =TRUE, 
+              arrowsize=0.75,
+              palette = c("red", "navyblue", "darkgreen"),
+              legend.title = "Cluster")
+
+
+##### individuos
+ind.G59.elite <- get_pca_ind (G59.elite.pca)
+ind.G59.elite
+
+
+# Clustering, auto nb of clusters:
+hc.pheno.G59.elite <- HCPC (G59.elite.pca, nb.clust=-1)
+
+clust.pca.pheno.G59.elite <- hc.pheno.G59.elite$data.clust 
+
+
+# Plot cluster individuos 
+fviz_pca_ind (G59.elite.pca,
+              geom.ind = "point", # show points only (nbut not "text")
+              col.ind = clust.pca.pheno.G59.elite$clust, # color by groups
+              palette = c("darkgreen", "navyblue", "red", "black" ),
+              addEllipses = TRUE, # Concentration ellipses
+              legend.title = "Groups")
+
+# ordeno para  fusionar y  exportar
+
+clust.pca.G59.elite <- hc.pheno.G59.elite$data.clust 
+
+# ordeno para  fusionar y  exportar
+clust.pca.G59.elite <- clust.pca.G59.elite %>%
+                       dplyr::arrange(genotype) %>%
+                       dplyr::select (c(genotype, clust))
 
 
 PCA.elite <- PCA.elite %>%
-  arrange (genotype)
+            dplyr::arrange (genotype)
 
-PCA.elite$genotype == clust.pca.1.G59.elite$genotype
+PCA.elite$genotype == clust.pca.G59.elite$genotype
 
 prev.CA.elite <- PCA.elite %>%
-  mutate (clust.PCA = clust.pca.1.G59.elite$clust)
+                 dplyr::inner_join(clust.pca.G59.elite, by= "genotype") %>%
+                 dplyr::rename (clust.PCA = clust)
 
 write.table (prev.CA.elite, file = "./Data/procdata/prev.CA.elite.txt", 
              append = FALSE, quote = TRUE, 
@@ -284,12 +340,9 @@ write.table (prev.CA.elite, file = "./Data/procdata/prev.CA.elite.txt",
              dec = ".", row.names = FALSE,
              col.names = TRUE)
 
-
-
-
-########  se carga los datos #########
+########  se cargan los datos #########
 ## datos el modelo
-CA.DMSO <- read.table ("./Data/procdata/CA.DMSO.q25.txt", 
+CA.DMSO <- read.table ("./Data/rawdata/CA.DMSO.q25.txt", 
                       header = TRUE, sep = "\t",dec = ".",
                       na.strings = "NA")
 
@@ -308,10 +361,10 @@ plot (res.ca.DMSO.tm, title="CA.DMSO")
 
 
 ########## 
-CA.elite <- read.table ("./Data/procdata/CA.elite.q25.txt", 
+CA.elite <- read.table ("./Data/rawdata/CA.elite.q25.txt", 
                        header = TRUE, sep = "\t",dec = ".",
                        na.strings = "NA")
-
+str (CA.elite)
 row.names (CA.elite) <- CA.elite$var.factor
 
 summary (CA.elite)
