@@ -170,7 +170,7 @@ clust.pca.pheno.G88.DMSO <- hc.pheno.G88.DMSO$data.clust
 
 
 # Plot cluster individuos 
-fviz_pca_ind (G88.DMSO.pca.1,
+fviz_pca_ind (G88.DMSO.pca,
               geom.ind = "point", # show points only (nbut not "text")
               col.ind = clust.pca.pheno.G88.DMSO$clust, # color by groups
               palette = c("darkorange", "navyblue", "red"),
