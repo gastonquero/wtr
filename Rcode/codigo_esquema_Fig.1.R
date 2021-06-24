@@ -7,7 +7,7 @@
 ########################################################################
 
 getwd ()
-setwd ("C:/Users/Usuario/OneDrive/Documentos/Paper_modelo_consumo_soja_2020")
+setwd ("R:/wtr")
 
 # Paquetes 
 library (lme4)
@@ -25,6 +25,7 @@ library("dplyr")
 
 ########  se carga los datos 
 # cargar datos 
+
 SPM_data <- read.table ("./Data/rawdata/SPM_data.txt" ,
                            header = TRUE, sep = "",dec = ".",
                            na.strings = "NA" )
@@ -87,29 +88,29 @@ plot (w.SPM ~ time, pch=21, cex=1,
       data=SPM_data_1)
 
 points (w.SPM ~ time, pch=16, type="p", 
-        lty=3, lwd=1.5, cex=0.7,
-        col="black", bg="black",
-        data=pot.1)
-
-points (w.SPM ~ time, pch=16, type="p", 
-        lty=3, lwd=1.5, cex=0.7,
-        col="black", bg="black",
+        lty=3, lwd=1.5, cex=1,
+        col="gray38", bg="gray38",
         data=pot.2)
 
 points (w.SPM ~ time, pch=16, type="p", 
-        lty=3, lwd=1.5, cex=0.7,
-        col="black", bg="black",
+        lty=3, lwd=1.5, cex=1,
+        col="gray38", bg="gray38",
         data=pot.3)
 
 points (w.SPM ~ time, pch=16, type="p", 
-        lty=3, lwd=1.5, cex=0.7,
-        col="black", bg="black",
+        lty=3, lwd=1.5, cex=1,
+        col="gray38", bg="gray38",
         data=pot.4)
 
 points (w.SPM ~ time, pch=16, type="p", 
-        lty=3, lwd=1.5, cex=0.7,
-        col="black", bg="black",
+        lty=3, lwd=1.5, cex=1,
+        col="gray38", bg="gray38",
         data=pot.5)
+
+points (w.SPM ~ time, pch=16, type="p", 
+        lty=3, lwd=1.5, cex=1.2,
+        col="black", bg="black",
+        data=pot.1)
 
 axis(2,col="black",las=1)  ## las=1 makes horizontal labels
 mtext("peso (g)",side=2,line=2.5)
@@ -119,7 +120,7 @@ mtext("time (d)",side=1,line=2.5)
 box()
 
 ##### Esta ecuacion la necesito para calcular AR
-
+### ecuacion general
 eq.05 <-  nls (SPM_data$w.SPM  ~ B * exp (-k*time) + A0 ,
                           start = list (k = 0.2, B = 235, A0=515),
                           trace = TRUE , 
@@ -131,12 +132,33 @@ k.eq.05  <- coef.eq.05  [1,1]
 B.eq.05  <- coef.eq.05  [1,2]
 A0.eq.05 <- coef.eq.05  [1,3]
 
-# Aca calculo en AR 
+
+### ecuacion pot_1
+eq.05.pot.1 <-  nls (pot.1$w.SPM  ~ B * exp (-k*time) + A0 ,
+               start = list (k = 0.2 , B = 235, A0= 515),
+               trace = TRUE , 
+               data= pot.1) 
+
+coef.eq.05.pot.1 <- rbind (coef (eq.05.pot.1))
+
+k.eq.05.p1  <- coef.eq.05.pot.1  [1,1]
+B.eq.05.p1  <- coef.eq.05.pot.1  [1,2]
+A0.eq.05.p1 <- coef.eq.05.pot.1  [1,3]
+
+
+# Aca calculo en AR para potl1
+AR.p1 <- A0.eq.05.p1 - S
+
+curve  (B.eq.05.p1 *(exp (-k.eq.05.p1 * x)) + AR.p1 + S, 
+        from=0, to=50, xlab="x", ylab="y",lwd=2,
+        add = TRUE, col="black",lty= 1)
+
+# Aca calculo en AR para general
 AR <- A0.eq.05 - S
 
 curve  (B.eq.05 *(exp (-k.eq.05 * x)) + AR + S, 
         from=0, to=50, xlab="x", ylab="y",lwd=3,
-        add = TRUE, col="red",lty= 1)
+        add = TRUE, col="red",lty= 2)
 
 # el peso del SPM al tiempo cero
 abline (h=unique(P0), col="red", lty=2) # esto es P(0)
@@ -373,6 +395,9 @@ ee.3 <- SPM_data_1 %>% filter (pot== "pot_3")
 ee.4 <- SPM_data_1 %>% filter (pot== "pot_4")
 ee.5 <- SPM_data_1 %>% filter (pot== "pot_5")
 head(ee.5)
+
+x=ee.1 
+y=2
 
 et.model.2 <- function(x, y) {
   y1 <- filter (x, time==y)    %>% select(ET.SPM)
