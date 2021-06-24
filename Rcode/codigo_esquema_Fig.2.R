@@ -33,7 +33,7 @@ str (SPM_data)
 
 summary (SPM_data)
 
-##############
+############## datos de los pesos de las macetas y el sustrato ########
 470 -453
 mean.pss      <- mean (c(470,458,453,468))   # Esto es el peso seco del sustrato
 sd.pss        <- sd   (c(470,458,453,468))
@@ -42,12 +42,6 @@ pm <- 41                           # Esto es el peso de la maceta
 
 S <- mean.pss + pm                    # Este es el peso del sustrato mas 
                                       # el peso de la maceta
-
-
-#SPM_data$rem <- SPM_data$w.SPM - S
-#
-
-
 # el peso del SPM al tiempo cero
 P0  <- SPM_data %>% 
        dplyr::filter (time==0) %>% 
@@ -60,14 +54,9 @@ SPM_data_1 <- cbind ( SPM_data,
                       "A" = SPM_data$w.SPM - S,
                       "ET.SPM" = unique(P0$w.SPM) - SPM_data$w.SPM)
 
-# filtro lps datos por maceta 
-pot.1 <- SPM_data_1 %>% filter (pot== "pot_1")
-pot.2 <- SPM_data_1 %>% filter (pot== "pot_2")
-pot.3 <- SPM_data_1 %>% filter (pot== "pot_3")
-pot.4 <- SPM_data_1 %>% filter (pot== "pot_4")
-pot.5 <- SPM_data_1 %>% filter (pot== "pot_5")
-
 #data= SPM_data_1 
+
+##### ecuacion 05 ##########
 run_curve.eq05 <- function ( data = NULL){
    
   list.pot <- unique (data$pot)
@@ -188,6 +177,7 @@ abline (h= 522.3, col="red", lty=2)
 
 dev.off()
 
+########## ecuacion 07 ##########
 run_curve.eq07 <- function ( data = NULL){
   
   list.pot <- unique (data$pot)
@@ -272,6 +262,9 @@ run_curve.eq07 <- function ( data = NULL){
 
 parSPM.eq07 <- run_curve.eq07 (data= SPM_data_1 )
 parSPM.eq07
+
+
+
 
 #### ##### Figura 2B #### 
 svg (filename="./Figures/Fig.2/fig.2B.svg", 
