@@ -46,7 +46,7 @@ library ("readr")
 
 ########  se carga los datos 
 
-SPM_data <- read_delime (file ="./Data/rawdata/SPM_data.txt" ,
+SPM_data <- read_delim (file ="./Data/rawdata/SPM_data.txt" ,
                         delim="\t", na="NA",
                         escape_backslash = FALSE,
                         escape_double = TRUE,
@@ -54,157 +54,204 @@ SPM_data <- read_delime (file ="./Data/rawdata/SPM_data.txt" ,
                         col_types = NULL)
 
 
+############## datos de los pesos de las macetas y el sustrato ########
+#470 -453
+mean.pss      <- mean (c(470,458,453,468))   # Esto es el peso seco del sustrato
+sd.pss        <- sd   (c(470,458,453,468))
+
+pm <- 41                           # Esto es el peso de la maceta
 
 
+SPM_data_1 <- SPM_data %>%
+              dplyr::mutate (genotype = "Geno_1") %>%
+              dplyr::select (genotype, pot, everything())
 
+summary (SPM_data_1)
 
-
-
-str (SPM_data)
-
-summary (SPM_data)
-
-
-
-
-
-# cargar datos crudos
-# ec2b.rep
-ec2b.rep <- read.table ("./Data/rawdata/input/ec2b.rep.txt" ,
-                        header = TRUE, sep = "",dec = ".",
-                        na.strings = "NA" )
-
-###### control de la matriz #########3
-str (ec2b.rep)
-length(unique(ec2b.rep$pot))
-length(unique(ec2b.rep$genotype))
 
 
 ####### esto es para setear la salida grafica
 ##########  argumentos ########
-dt = ec2b.rep 
-pss = 1970 
-pm = 215 
+dt = SPM_data_1 
+pss = mean.pss
+pm = 41 
 t1 =4 
 W="w.SPM"
-essay="ec2b.rep1"
+essay="ajuste"
 ue ="pot"
 genotype = "genotype"
 
 run_eq.07 <- function (dt = NULL,  genotype=NULL, t1=NULL, W=NULL, pss=NULL, pm = NULL, essay=NULL, ue=NULL) {
  
    dir.create (file.path ("Data"), showWarnings = FALSE)
-   dir.create (file.path ("Data", "outpout.ET"), showWarnings = FALSE)
+   dir.create (file.path ("Data", "out.ETmodel"), showWarnings = FALSE)
    dir.create (file.path ("Figures"), showWarnings = FALSE)
-   dir.create (file.path ("Figures", "Plots.ET"), showWarnings = FALSE)
+   dir.create (file.path ("Figures", "Plots.ETmodel"), showWarnings = FALSE)
 
    dt1 <- dt %>% 
           dplyr::rename (genotype = all_of (genotype)) %>%
           dplyr::rename (W = all_of (W)) %>%
           dplyr::rename (pot = all_of (ue))
-#getwd()
-#setwd (file.path ("Data", "outpout"))
-#listapot <- unique(ec2b.rep1$pot)  ### aca podria ser ue y a la reemplazo por dt
 
-resultados <- NULL
-datos_ET <- NULL
+listapot <- unique (dt1$pot)
 
-listapot <- unique(dt1$pot)
+S <- pss + pm
 
-dt.ET <- lapply (listapot, function(filtro){
-         
-         datos <- filter (dt1, pot== filtro)
-         S <- pss + pm # Este es el peso del sustrato mas el peso de la maceta
-         datos$water.SPM.t <-  datos$W -S 
-         W0 = datos$W[which(datos$time == 0)]
-         datos$ET.t <- W0 - datos$W
+dt.ET <- bind_rows (lapply (listapot, function (filt.pot){
   
-         write.table (datos, file =paste("./Data/outpout.ET/dt.ET","pot_",filtro,".txt",sep=""),
-               append = FALSE, quote = TRUE, sep = ",",
-               eol = "\n", na = "NA", dec = ".", row.names = FALSE,
-               col.names = TRUE)
-          datos_ET <- datos 
-          print (datos_ET) 
-})
+          #filt.pot = "pot_1"
+  
+          dt2 <- dt1 %>%
+                   dplyr::filter (pot== filt.pot)
+          
+          #S <- pss + pm    # Este es el peso del sustrato mas el peso de la maceta
+          
+          dt2 <- dt2 %>%
+                 dplyr::mutate (At = W - S)
+          
+          WO <- dt2 %>%
+                dplyr::filter(time == 0) %>%
+                dplyr::select (W)
+          
+          dt2 <- dt2 %>%
+                 dplyr::mutate (ETt = WO$W - W)
+        
+          print (dt2) 
+}))
 
-datos.ET <- do.call(rbind.data.frame, dt.ET)
 
-write.table (datos.ET, file =paste("./Data/outpout.ET/dt.ET",essay,".csv",sep=""),
-             append = FALSE, quote = TRUE, sep = ",",
-             eol = "\n", na = "NA", dec = ".", row.names = FALSE,
-             col.names = TRUE)
+write_delim (dt.ET, file = str_c("./Data/out.ETmodel/dt.ET",essay,".csv"), 
+             delim = ",", na = "NA")
 
+dt.ET.model  <- bind_rows (lapply (listapot, function (filt.pot) {        # aca reeplazaria por listaue
+  
+                  filt.pot = "pot_1"
+                  dt3 <- dt.ET %>%
+                         dplyr::filter (pot==filt.pot)
+                    
+                  
+                  W0 <- dt3 %>%
+                       dplyr::filter(time == 0) %>%
+                       dplyr::select (W)
+                  
+                  Wn <- dt3 %>%
+                        dplyr::filter (time == t1)
+                  
+                  W2n <- dt3 %>%
+                         dplyr::filter (time == 2 * t1)
 
-et.model  <- sapply (listapot, function (filtro) {        # aca reeplazaria por listaue
-                  datos <- filter (dt1, pot == filtro) # aca reemplaze por dt ec2b.rep
-                  S     <- pss + pm # Este es el peso del sustrato mas el peso de la maceta
-                  datos$water.SPM.t <-  datos$W - S 
-                  W0 <- datos$W[which(datos$time == 0)]
-                  datos$ET.t <- W0 - datos$W
+                  n <- t1
+                  
+                 Bs <-  (Wn$W - W0$W)^2 /(W2n$W - 2*Wn$W + W0$W)                     # este es el "B"  estimado por Simondi
+                 ks <-  -(1/n) * log ((W2n$W - Wn$W) / (Wn$W - W0$W ))                   # este es el "k"  estimado por Simondi
+                 t0.5s <- (1/ ks) * log(2) 
+                 
 
-#W0 = datos$w.SPM[which(datos$time == 0)]
-Wn =  datos$W[which(datos$time == t1)]
-W2n = datos$W[which(datos$time == 2*t1)]
-n = t1
-Bs <-  (Wn - W0)^2 /(W2n - 2*Wn + W0)                     # este es el "B"  estimado por Simondi
-ks <-  -(1/n) * log ((W2n-Wn)/ (Wn-W0))                   # este es el "k"  estimado por Simondi
-
+                 
+                 
+                 
+                 
+                 
+                 
 if (is.na (ks) == FALSE) {
 
 if(ks > 0.05){ 
   
-resultados <- cbind(ks,Bs)
+par.analytic <- tibble (k.an=ks, B.an=Bs, t05.a = t0.5s)
 
-eq.07 <- nls (ET.t ~ B * (1 - exp (-k*time)),               # esta es la estimacion de los parametros por Gauss-Newton
+
+eq.07 <- nls (ETt ~ B * (1 - exp (-k*time)),               # esta es la estimacion de los parametros por Gauss-Newton
               start = list (k = ks, B = Bs),
               trace = FALSE , 
-              data= datos, nls.control(warnOnly=TRUE))
+              data= dt3, nls.control(warnOnly=TRUE))
 
 k.eq.07 <- round (coef (eq.07)[1],3)                            # este es el k de Gauss-Newton
 B.eq.07 <- round (coef (eq.07)[2],3)    
-tm <- (1/ k.eq.07) * log(2)    
+t0.5.07 <- (1/ k.eq.07) * log(2)   
 
-resultados <- cbind(B.eq.07,resultados)
-resultados <- cbind(k.eq.07,resultados)
+par.numeric <- tibble (k.n=k.eq.07, B.n=B.eq.07, t05.n = t0.5.07 )
 
-es   <-  data.frame (datos$essay[1])
-geno <-  data.frame(datos$genotype[1])
-pot  <-  filtro
+es   <-   essay
+geno <-  unique (dt3$genotype)
+pot  <-  filt.pot
 
-resultados <- cbind(k.eq.07,B.eq.07)
+par.ETmodel <- tibble (essay = essay, genotype = geno, pot = filt.pot, par.numeric, par.analytic )
 
-es   <-  data.frame(datos$essay[1])
-geno <-  data.frame(datos$genotype[1])
-pot  <-  filtro
+#S <- pss + pm 
 
-resultados <- data.frame (es,geno,pot, resultados)
-resultados <- resultados %>%
-  rename (essay = datos.essay.1.)%>%
-  rename (genotype = datos.genotype.1.) %>%
-  mutate (tm = tm)
+AR.seed <- W0 - par.ETmodel$B.n
+
+if ( AR.seed$W > S )   {
+  
+  eq.xy  <- nls ( W ~ B * exp (-k*time) + yy ,               # esta es la estimacion de los parametros por Gauss-Newton
+                  start = list (k = par.ETmodel$k.n, B = par.ETmodel$B.n , yy = AR.seed$W),
+                  trace = FALSE , 
+                  data= dt3, nls.control (warnOnly=TRUE))
+  
+  #k.eq.xy <- coef (eq.xy)[1]               # este es el k de Gauss-Newton
+  #B.eq.xy <- coef (eq.xy)[2]               # este es el B de Gauss-Newton
+  ARS     <- coef (eq.xy)[3]               # este es el ARS de Gauss-Newton
+  AR <-  ARS - S
+  par.AR <- tibble(AR.n =  AR)
+  
+  if (AR > 0) {
+    
+ parametros <- bind_cols (par.ETmodel,  par.AR )
+ print (parametros)
+ 
+  }
+}
 
 
 
-write.table (resultados, file =paste("./Data/outpout.ET/par_ET_model","pot_",filtro,".txt",sep=""),
-               append = FALSE, quote = TRUE, sep = ",",
-               eol = "\n", na = "NA", dec = ".", row.names = FALSE,
-               col.names = TRUE)
-print(resultados)
 
   }
- }
-})
+}
+                 
+                 
+                 
+ myfun <- function(x) 232.8534 *(1- exp ( - 0.2077901  * x))
+                 myfun.24 <- function(x) 547.9348  * (1- exp ( -0.06938826  * x))
+                 myfun.36 <- function(x) 368.9362  * (1- exp ( -0.10787136  * x))
+                 myfun.48 <- function(x) 233.2783  * (1- exp ( -0.21057258  * x))
+                 myfun.510 <- function(x) 206.1552 * (1- exp ( -0.29167244  * x))
+                 
+                 
+ ggscatter (dt3, x = "time", y = "W", 
+                            ylim=c(S, W0$W),
+                            color = "gray38") +
+          geom_hline(yintercept = W0$W) +
+          geom_hline(yintercept = S) +
+          geom_hline(yintercept = ARS)
+ 
+ 
+ + 
+                   stat_function(fun = myfun, lwd=1) +
+                   stat_function(fun = myfun.24, color = "red", lwd=1, lty=2) +
+                   stat_function(fun = myfun.36, color = "navyblue", lwd=1, lty=2) +
+                   stat_function(fun = myfun.48, color = "darkorange", lwd=1.5, lty=2) +
+                   stat_function(fun = myfun.510, color = "gray48", lwd=1, lty=2)                
+                 
+                 
+                 
+}))
 
-resultado.global <- do.call (rbind.data.frame, et.model)
 
-write.table (resultado.global, file =paste("./Data/outpout.ET/resultado.global",essay,".csv",sep=""),
-             append = FALSE, quote = TRUE, sep = ",",
-             eol = "\n", na = "NA", dec = ".", row.names = FALSE,
-             col.names = TRUE)
+write_delim (dt.ET.model, file = str_c("./Data/out.ETmodel/dt.ET.model",essay,".csv"), 
+             delim = ",", na = "NA")
+
+
+
+
+
+
 
 ################3
-plot.et.model  <- sapply (listapot, function (filtro) {        # aca reeplazaria por listaue
-  datos <- filter (dt, pot == filtro) # aca reemplaze por dt ec2b.rep
+lapply (listapot, function (filt.pot) {        # aca reeplazaria por listaue
+  
+  
+  dt4 <- dt.ET %>%
+           dplyr::filter (pot == filt.pot) # aca reemplaze por dt ec2b.rep
   S     <- pss + pm # Este es el peso del sustrato mas el peso de la maceta
   datos$water.SPM.t <-  datos$w.SPM - S 
   W0 <- datos$w.SPM[which(datos$time == 0)]
