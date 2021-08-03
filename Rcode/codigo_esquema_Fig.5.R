@@ -29,9 +29,7 @@ library("lubridate")
 library(ggcorrplot)
 
 ########  se carga los datos 
-# cargar datos crudos que de los parametros de la funcion ET obtenidos 
-# a partir del peso predicho por cada maceta 
-
+## ensayo 1
 pred.model.geno.DMSO.1 <- read.table ("./Data/rawdata/model_geno_DMSO_1.txt", 
                                     header = TRUE, sep = "\t",dec = ".",
                                     na.strings = "NA")
@@ -75,7 +73,7 @@ ggplot (data = pred.model.geno.DMSO.1b )+
 cor (pred.model.geno.DMSO.1b$B.eq.07, pred.model.geno.DMSO.1b$Bs)
 
 
-############
+## ensayo 2
 pred.model.geno.DMSO.2 <- read.table ("./Data/rawdata/model_geno_DMSO_2.txt", 
                                       header = TRUE, sep = "\t",dec = ".",
                                       na.strings = "NA")
@@ -122,7 +120,7 @@ pred.model.geno.DMSO.12.a <- pred.model.geno.DMSO.12 %>%
 
 ####### plot de loas datos crudos ###################
 ggplot (data = pred.model.geno.DMSO.12.a )+
-  geom_point(mapping = aes (x= k.eq.07,y=ks))
+        geom_point(mapping = aes (x= k.eq.07,y=ks))
 
 cor (pred.model.geno.DMSO.12.a$k.eq.07, pred.model.geno.DMSO.12.a$ks)
 
@@ -158,8 +156,7 @@ head(pred.model.geno.DMSO.12.c)
 
 summary (pred.model.geno.DMSO.12.c)
 
-
-################### Aca voy a cargar los datos de agua remanente #
+## ensayo 3
 pred.model.geno.DMSO.3 <- read.table ("./Data/rawdata/model_geno_DMSO_3.txt", 
                                       header = TRUE, sep = "\t",dec = ".",
                                       na.strings = "NA")
@@ -278,6 +275,7 @@ ks <-  pred.model.geno.DMSO.12.e$ks
 tm <-  pred.model.geno.DMSO.12.e$tm
 ARS <- pred.model.geno.DMSO.3a$ARS
 
+#### aca se calcula la conductancia en t0.5
 
 pred.model.geno.DMSO.123 <- pred.model.geno.DMSO.12.e %>%
                             mutate (k.eq.xy = pred.model.geno.DMSO.3a$k.eq.xy) %>%
@@ -312,21 +310,32 @@ svg (filename="./Figures/Fig.5/fig.5a.hist.tm.svg",
      pointsize=12)
 
 tm <- pred.model.geno.DMSO.123$tm
-shapiro.test (tm)
 
 q25.tm <-  quantile (tm, .25, na.rm = TRUE)
 q75.tm <-  quantile (tm, .75, na.rm = TRUE)
 q50.tm <-  quantile (tm, .50, na.rm = TRUE)
 
+#### aca se agrupa por el tm ####
+tm.nq.q1 <- pred.model.geno.DMSO.123 %>%
+            dplyr::filter (tm < q25.tm) %>%
+            dplyr::arrange (tm) %>%
+            dplyr::mutate (group.tm = "tm.q1" )
 
-tm.nq.25 <- pred.model.geno.DMSO.123 %>%
-            filter (tm < q25.tm)%>%
-            arrange (tm)
+
+tm.nq.q2 <- pred.model.geno.DMSO.123 %>%
+            filter (tm >= q25.tm) %>%
+            filter (tm <= q75.tm)%>%
+            arrange (tm) %>%
+            dplyr::mutate (group.tm = "tm.q2" )
 
 
-tm.nq.75 <- pred.model.geno.DMSO.123 %>%
+tm.nq.q3 <- pred.model.geno.DMSO.123 %>%
             filter (tm > q75.tm)%>%
-            arrange (tm)
+            arrange (tm) %>%
+            dplyr::mutate (group.tm = "tm.q3" )
+
+
+pred.model.geno.DMSO.123.qtm <- bind_rows(tm.nq.q1, tm.nq.q2, tm.nq.q3)
 
 
 h.tm  <- hist (tm , breaks ="Sturges")
@@ -353,13 +362,13 @@ x2.tm <- max (which (dens.tm$x <= q25.tm))
 
 with (dens.tm, polygon(x=c(x[c(x1.tm,x1.tm:x2.tm,x2.tm)]),
                          y= c(0, y[x1.tm:x2.tm], 0),border ='navyblue',
-                         col=scales::alpha( 'navyblue')))
+                         col=scales::alpha( 'navyblue', 0.5)))
 
 x3.tm  <- min (which (dens.tm$x >= q75.tm))
 x4.tm  <- max (which (dens.tm$x > 0))
 with (dens.tm, polygon(x=c(x[c(x3.tm,x3.tm:x4.tm,x4.tm)]),
                          y= c(0, y[x3.tm:x4.tm], 0),border ='navyblue',
-                         col=scales::alpha( 'navyblue')))
+                         col=scales::alpha( 'navyblue',1)))
 
 abline (v=q50.tm, col="navyblue", lwd=1.5, lty =2)
 
@@ -377,17 +386,30 @@ svg (filename="./Figures/Fig.5/fig.5b.hist.Gwtm.svg",
 Gwtm <- pred.model.geno.DMSO.123$Gwtm
 shapiro.test (Gwtm)
 
+summary (Gwtm)
 q25.Gwtm <-  quantile (Gwtm, .25, na.rm = TRUE)
 q75.Gwtm <-  quantile (Gwtm, .75, na.rm = TRUE)
 q50.Gwtm <-  quantile (Gwtm, .50, na.rm = TRUE)
 
-Gwtm.nq.25 <- pred.model.geno.DMSO.123 %>%
-  filter (Gwtm < q25.Gwtm)%>%
-  arrange (Gwtm)
+Gwtm.nq.q1 <- pred.model.geno.DMSO.123 %>%
+              dplyr::filter (Gwtm < q25.Gwtm)%>%
+              dplyr::arrange (Gwtm) %>%
+              dplyr::mutate (group.Gwtm = "Gwtm.q1" )
 
-Gwtm.nq.75 <-pred.model.geno.DMSO.123 %>%
-  filter (Gwtm > q75.Gwtm)%>%
-  arrange (Gwtm)
+
+Gwtm.nq.q2 <- pred.model.geno.DMSO.123 %>%
+              dplyr::filter (Gwtm  >= q25.Gwtm) %>%
+              dplyr::filter (Gwtm  <=  q75.Gwtm)%>%
+              dplyr::arrange (Gwtm) %>%
+              dplyr::mutate (group.Gwtm = "Gwtm.q2" )
+
+Gwtm.nq.q3 <- pred.model.geno.DMSO.123 %>%
+              dplyr::filter (Gwtm > q75.Gwtm)%>%
+              dplyr::arrange (Gwtm)%>%
+              dplyr::mutate (group.Gwtm = "Gwtm.q3" )
+
+
+pred.model.geno.DMSO.123.qGw <- bind_rows(Gwtm.nq.q1, Gwtm.nq.q2, Gwtm.nq.q3)
 
 h.Gwtm  <- hist (Gwtm , breaks="Sturges")
 h.Gwtm$density <- h.Gwtm$counts/sum (h.Gwtm$counts)*100
@@ -414,18 +436,32 @@ x2.Gwtm <- max (which (dens.Gwtm$x <= q25.Gwtm))
 
 with (dens.Gwtm, polygon (x=c(x[c(x1.Gwtm,x1.Gwtm:x2.Gwtm,x2.Gwtm)]),
                           y= c(0, y[x1.Gwtm:x2.Gwtm], 0),border ='navyblue',
-                          col=scales::alpha( 'navyblue',1)))
+                          col=scales::alpha( 'navyblue',.5)))
 
 x3.Gwtm  <- min (which (dens.Gwtm$x >= q75.Gwtm))
 x4.Gwtm  <- max (which (dens.Gwtm$x > 0))
 with (dens.Gwtm, polygon(x=c(x[c(x3.Gwtm,x3.Gwtm:x4.Gwtm,x4.Gwtm)]),
                           y= c(0, y[x3.Gwtm:x4.Gwtm], 0),border ='navyblue',
-                          col=scales::alpha( 'navyblue',.5)))
+                          col=scales::alpha( 'navyblue',1)))
 
 abline (v=q50.Gwtm, col="navyblue", lwd=1.5, lty =2)
 
 box()
 dev.off()
+
+pred.model.geno.DMSO.123.qGw.1 <- pred.model.geno.DMSO.123.qGw %>%
+                                dplyr::select (c(pot, group.Gwtm))
+
+group.feno.DMSO <- pred.model.geno.DMSO.123.qtm %>%
+                   dplyr::inner_join(pred.model.geno.DMSO.123.qGw.1, by="pot" )
+
+write.table (group.feno.DMSO, file = "./Data/procdata/pred.model.geno.DMSO.123", 
+             append = FALSE, quote = TRUE, sep = ",",
+             eol = "\n", na = "NA", dec = ".", row.names = FALSE,
+             col.names = TRUE)
+
+write_delim (group.feno.DMSO, file = "./Data/procdata/group.feno.DMSO.txt",
+             delim = ";",na = "NA")
 
 ###### ACA TERMINA EL CODIGO PARA LA FIGURA 5A Y 5B ##############################
 
@@ -437,8 +473,8 @@ ec2brep.d.model.4 <- read.table ("./Data/rawdata/ec2brep.d.model.4.txt" ,
 head(ec2brep.d.model.4)
 
 xx <- ec2brep.d.model.4 %>%
-  dplyr::filter (str_detect(linea.disenio , "testigo")) %>%
-  dplyr::select (genotype,linea.disenio)
+      dplyr::filter (str_detect(linea.disenio , "testigo")) %>%
+      dplyr::select (genotype,linea.disenio)
 
 
 distinct(xx, genotype, .keep_all = TRUE)
@@ -453,16 +489,16 @@ pred.model.geno.EC.1 <- read.table ("./Data/rawdata/model_geno_EC_1.txt",
 head(pred.model.geno.EC.1)
 
 pred.model.geno.EC.1a <- pred.model.geno.EC.1 %>%
-  filter ( genotype !="111_4"  &
-             genotype != "133_TARD_38" &
-             genotype !="133_TARD_8")
+                         dplyr::filter ( genotype !="111_4"  &
+                                         genotype != "133_TARD_38" &
+                                         genotype !="133_TARD_8")
 
 pred.model.geno.EC.2 <- read.table ("./Data/rawdata/model_geno_EC_2.txt", 
                                     header = TRUE, sep = "\t",dec = ".",
                                     na.strings = "NA")
 
 pred.model.geno.EC.2a <- pred.model.geno.EC.2 %>%
-  filter (genotype != "133_TARD_38")
+                         dplyr::filter (genotype != "133_TARD_38")
 
 
 
@@ -479,14 +515,14 @@ pred.model.geno.EC.1a$genotype ==  pred.model.geno.EC.2a$genotype
 
 
 pred.model.geno.EC.12 <- pred.model.geno.EC.1a %>%
-  mutate ( pred.a = pred.model.geno.EC.2a$a)%>%
-  mutate ( pred.b = pred.model.geno.EC.2a$b)%>%
-  mutate ( pred.rsq = pred.model.geno.EC.2a$rsq)
+                         dplyr::mutate ( pred.a = pred.model.geno.EC.2a$a)%>%
+                         dplyr::mutate ( pred.b = pred.model.geno.EC.2a$b)%>%
+                         dplyr::mutate ( pred.rsq = pred.model.geno.EC.2a$rsq)
 
 summary (pred.model.geno.EC.12)
 
 pred.model.geno.EC.12a <- pred.model.geno.EC.12 %>%
-  filter ( pred.rsq > 0.51) 
+                          dplyr::filter ( pred.rsq > 0.51) 
 
 summary (pred.model.geno.EC.12a)
 
@@ -543,10 +579,10 @@ head(pred.model.geno.EC.12d)
 
 
 pred.model.geno.EC.12d  <- pred.model.geno.EC.12d %>%
-  mutate (ab= -pred.model.geno.EC.12d$pred.a/pred.model.geno.EC.12d$pred.b)%>%
-  mutate (dGwtm = (2*pred.model.geno.EC.12d$ks*
-                     pred.model.geno.EC.12d$pred.b* 
-                     pred.model.geno.EC.12d$Bs))
+                           dplyr::mutate (ab= -pred.model.geno.EC.12d$pred.a/pred.model.geno.EC.12d$pred.b)%>%
+                           dplyr:: mutate (dGwtm = (2*pred.model.geno.EC.12d$ks*
+                                                     pred.model.geno.EC.12d$pred.b* 
+                                                     pred.model.geno.EC.12d$Bs))
 
 
 ################### Aca voy a cargar los datos de agua remanente #
@@ -555,11 +591,12 @@ pred.model.geno.EC.3 <- read.table ("./Data/rawdata/model_geno_EC_3.txt",
                                     na.strings = "NA")
 
 pred.model.geno.EC.3 <- pred.model.geno.EC.3 %>%
-  arrange (genotype)
+                        dplyr::arrange (genotype)
 
 
 
-pred.model.geno.EC.12d <- pred.model.geno.EC.12d %>% arrange (genotype)
+pred.model.geno.EC.12d <- pred.model.geno.EC.12d %>% 
+                          dplyr::arrange (genotype)
 
 
 dim(pred.model.geno.EC.3)
@@ -572,24 +609,24 @@ setdiff (pred.model.geno.EC.12d$genotype, pred.model.geno.EC.3$genotype)
 setdiff (pred.model.geno.EC.3$genotype, pred.model.geno.EC.12d$genotype)
 
 pred.model.geno.EC.12e <- pred.model.geno.EC.12d %>%
-  filter (genotype !="118_26" &
-            genotype !="133_TARD_21" &
-            genotype !="YM10_36005")
+                          dplyr::filter (genotype !="118_26" &
+                                         genotype !="133_TARD_21" &
+                                         genotype !="YM10_36005")
 
 pred.model.geno.EC.3a <- pred.model.geno.EC.3 %>%
-  filter (genotype !="100_30" &
-            genotype !="101_3"  &
-            genotype !="101_31" &
-            genotype !="111_13" &
-            genotype !="117_23" &
-            genotype != "117_9" &
-            genotype != "118_23" &
-            genotype != "124_19" &
-            genotype != "127_9" &
-            genotype != "133_TARD_32" &
-            genotype != "133_TARD_38" &
-            genotype != "139_30" &
-            genotype != "85_2_8_20")                               
+                         dplyr::filter (genotype !="100_30" &
+                                        genotype !="101_3"  &
+                                        genotype !="101_31" &
+                                        genotype !="111_13" &
+                                        genotype !="117_23" &
+                                        genotype != "117_9" &
+                                        genotype != "118_23" &
+                                        genotype != "124_19" &
+                                        genotype != "127_9" &
+                                        genotype != "133_TARD_32" &
+                                        genotype != "133_TARD_38" &
+                                        genotype != "139_30" &
+                                        genotype != "85_2_8_20")                               
 
 
 pred.model.geno.EC.3a$genotype == pred.model.geno.EC.12e$genotype                             
@@ -612,10 +649,12 @@ pred.model.geno.ES.123 <- pred.model.geno.EC.12e %>%
   mutate (Gwtm = b*Bs*(exp (-ks *tm)) + b * ARS + a )
 
 
-write.table ( pred.model.geno.ES.123, file = "./Data/procdata/pred.model.geno.ES.123.txt",
+write.table (pred.model.geno.ES.123, file = "./Data/procdata/pred.model.geno.ES.123.txt",
               append = FALSE, quote = TRUE, sep = ",",
               eol = "\n", na = "NA", dec = ".", row.names = FALSE,
               col.names = TRUE)
+
+
 
 
 # PRUEBA DE NORMAILDAD
@@ -633,17 +672,29 @@ shapiro.test (tm)
 q25.tm <-  quantile (tm, .25, na.rm = TRUE)
 q75.tm <-  quantile (tm, .75, na.rm = TRUE)
 q50.tm <-  quantile (tm, .50, na.rm = TRUE)
+###############################################33
+tm.nq.q1 <- pred.model.geno.ES.123  %>%
+  dplyr::filter (tm < q25.tm) %>%
+  dplyr::arrange (tm) %>%
+  dplyr::mutate (group.tm = "tm.q1" )
 
-tm.nq.25 <- pred.model.geno.ES.123 %>%
-  filter (tm < q25.tm)%>%
-  arrange (tm)
+
+tm.nq.q2 <- pred.model.geno.ES.123 %>%
+  filter (tm >= q25.tm) %>%
+  filter (tm <= q75.tm)%>%
+  arrange (tm) %>%
+  dplyr::mutate (group.tm = "tm.q2" )
 
 
-tm.nq.75 <- pred.model.geno.ES.123 %>%
+tm.nq.q3 <- pred.model.geno.ES.123 %>%
   filter (tm > q75.tm)%>%
-  arrange (tm)
+  arrange (tm) %>%
+  dplyr::mutate (group.tm = "tm.q3" )
 
 
+pred.model.geno.Elite.123.qtm <- bind_rows(tm.nq.q1, tm.nq.q2, tm.nq.q3)
+
+##############################3
 h.tm  <- hist (tm , breaks ="Sturges")
 h.tm$density <- h.tm$counts/sum (h.tm$counts)*100
 
@@ -658,7 +709,7 @@ par(new=TRUE)
 hist (tm, main="tm.geno", 
       freq=F, xlab="", ylab = "",
       axes=FALSE,col="gray85")
-
+#dev.off()
 lines (density (tm, na.rm = T), lwd=2,
        col="navyblue", lty=1)
 
@@ -678,6 +729,7 @@ with (dens.tm, polygon(x=c(x[c(x3.tm,x3.tm:x4.tm,x4.tm)]),
 
 abline (v=q50.tm, col="navyblue", lwd=1.5, lty =2)
 box()
+
 dev.off()
 
 
@@ -694,13 +746,27 @@ q25.Gwtm <-  quantile (Gwtm, .25, na.rm = TRUE)
 q75.Gwtm <-  quantile (Gwtm, .75, na.rm = TRUE)
 q50.Gwtm <-  quantile (Gwtm, .50, na.rm = TRUE)
 
-Gwtm.nq.25 <- pred.model.geno.ES.123 %>%
-  filter (Gwtm < q25.Gwtm)%>%
-  arrange (Gwtm)
+Gwtm.nq.q1 <- pred.model.geno.ES.123  %>%
+               dplyr::filter (Gwtm < q25.Gwtm ) %>%
+               dplyr::arrange (Gwtm) %>%
+               dplyr::mutate (group.Gwtm = "Gwtm.q1" )
 
-Gwtm.nq.75 <- pred.model.geno.ES.123 %>%
-  filter (Gwtm > q75.Gwtm)%>%
-  arrange (Gwtm)
+
+Gwtm.nq.q2 <- pred.model.geno.ES.123 %>%
+              dplyr::filter (Gwtm >= q25.Gwtm) %>%
+              dplyr::filter (Gwtm <= q75.Gwtm) %>%
+              dplyr::arrange (Gwtm) %>%
+              dplyr::mutate (group.Gwtm = "Gwtm.q2")
+
+
+Gwtm.nq.q3 <- pred.model.geno.ES.123 %>%
+            dplyr::filter (Gwtm > q75.Gwtm)%>%
+            dplyr::arrange (Gwtm) %>%
+            dplyr::mutate (group.Gwtm = "Gwtm.q3" )
+
+
+pred.model.geno.Elite.123.qGwtm <- bind_rows(Gwtm.nq.q1, Gwtm.nq.q2, Gwtm.nq.q3)
+
 
 h.Gwtm  <- hist (Gwtm , breaks="Sturges")
 h.Gwtm$density <- h.Gwtm$counts/sum (h.Gwtm$counts)*100
@@ -738,6 +804,20 @@ with (dens.Gwtm, polygon(x=c(x[c(x3.Gwtm,x3.Gwtm:x4.Gwtm,x4.Gwtm)]),
 abline (v=q50.Gwtm, col="navyblue", lwd=1.5, lty =2)
 
 box()
+
 dev.off()
+
+pred.model.geno.Elite.123.qGw.1 <- pred.model.geno.Elite.123.qGwtm %>%
+                                   dplyr::select (c(pot, group.Gwtm))
+
+group.feno.Elite <- pred.model.geno.Elite.123.qtm %>%
+                    dplyr::inner_join(pred.model.geno.Elite.123.qGw.1, by="pot" )
+
+
+
+write_delim (group.feno.Elite, file = "./Data/procdata/group.feno.Elite.txt",
+             delim = ";",na = "NA")
+
+
 
 ############### ACA termina el codigo para la figura 5 ##########################
