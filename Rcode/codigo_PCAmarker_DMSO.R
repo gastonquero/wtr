@@ -78,11 +78,11 @@ nmar(DM.SO.cross.1)
 totmar(DM.SO.cross.1)
 
 # eliminar los individuos con mas de 50 no genotipado
-DM.SO.cross.2 <- subset(DM.SO.cross.1, 
-                        ind=(ntyped(DM.SO.cross.1) > ((totmar(DM.SO.cross.1) * 70)/100)))
+DM.SO.cross.2 <- subset (DM.SO.cross.1, 
+                 ind=(ntyped(DM.SO.cross.1) > ((totmar(DM.SO.cross.1) * 50)/100)))
 
 indiv <- subset(DM.SO.cross.1, 
-                ind=(ntyped(DM.SO.cross.1)  < ((totmar(DM.SO.cross.1) * 70)/100)))
+                ind=(ntyped(DM.SO.cross.1)  < ((totmar(DM.SO.cross.1) * 50)/100)))
 
 indiv$pheno$id
 plotMissing(DM.SO.cross.2, main="DM.SO.cross.2")
@@ -155,6 +155,11 @@ length(names.marker)
 
 DM.SO.cross.2b <- drop.markers (DM.SO.cross.2b, names.marker)
 
+summary (DM.SO.cross )
+
+write.cross (DM.SO.cross.2b, format="csv",
+             filestem="./Data/procdata/DM.SO.cross.2b")
+
 
 write.cross (DM.SO.cross.2b, format="tidy",
              filestem="./Data/procdata/DM.SO.cross.2b")
@@ -165,27 +170,36 @@ write.cross (DM.SO.cross, format="tidy",
 
 ### Ahora cargo los datos para hacer el PCA ###
 
-DM.SO_dat <-  read_delim ( file ="./Data/rawdata/DM.SO_data.txt"  , delim ="\t",
-                           quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
+#DM.SO_dat <-  read_delim ( file ="./Data/rawdata/DM.SO_data.txt"  , delim ="\t",
+ #                          quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
+  #                         col_names = TRUE, col_types = NULL, na = "-")
+
+# cargo la matriz transpuesta 
+DM.SO_dat <-  read_delim ( file ="./Data/procdata/DM.SO.cross.2b.csv", 
+                           delim =",",quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
                            col_names = TRUE, col_types = NULL, na = "-")
 
-DM.SO_dat.1 <- DM.SO_dat %>%
+DM.SO_dat.x <- DM.SO_dat [-(1:2), -2 ]
+
+
+DM.SO_dat.1 <- DM.SO_dat.x %>%
                dplyr::mutate (id.1 = str_replace (id, "[-]", ".")) %>%
                dplyr::select (id.1, everything())
   
   
-ids_DM.SO.cross.2b  <-  read_delim ( file ="./Data/procdata/DM.SO.cross.2b_phe.csv", delim =",",
-                           quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
-                           col_names = TRUE, col_types = NULL, na = "NA")
+#ids_DM.SO.cross.2b  <-  read_delim ( file ="./Data/procdata/DM.SO.cross.2b_phe.csv", delim =",",
+ #                          quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
+  #                         col_names = TRUE, col_types = NULL, na = "NA")
 
-list.ids_DM.SO.cross.2b <- colnames (ids_DM.SO.cross.2b) [-1]
+#list.ids_DM.SO.cross.2b <- colnames (ids_DM.SO.cross.2b) [-1]
 
 
-head (DM.SO_dat.1)
+#head (DM.SO_dat.1)
+
 ### filtro  segun la matrix filtrada de los marcadores
 
-DM.SO_dat.2 <- DM.SO_dat.1 %>%
-               dplyr::filter (id.1 %in% list.ids_DM.SO.cross.2b )
+#DM.SO_dat.2 <- DM.SO_dat.1 %>%
+ #              dplyr::filter (id.1 %in% list.ids_DM.SO.cross.2b )
 
 
 ### cargo la correspondencia de id para los datos fenotipicos 
@@ -194,19 +208,31 @@ ids.pheno <-  read_delim ( file ="./Data/rawdata/ids_DMSO.txt"  , delim ="\t",
                            quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
                            col_names = TRUE, col_types = NULL, na = "-")
 
-
 ids.pheno.1 <- ids.pheno %>%
                dplyr::mutate (id.1 = str_replace (id, "[-]", ".")) %>%
                dplyr::select (id.1, everything()) %>%
                dplyr::mutate (id.1 = str_c ("G_",id.1)) %>%
                dplyr::select (c(id.1,genotypes, lineas ))
- 
+
+### cargo la matriz de donde hice los agrupamiento de la figur 5
+ids.pheno.1$lineas
+
+
+
+group.feno.DMSO <- read_delim ( file = "./Data/procdata/group.feno.DMSO.txt",
+                                delim =";", quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
+                                col_names = TRUE, col_types = NULL, na = "NA")
+
+group.feno.DMSO$genotype
 
 ##### uno las dos matrices  ##########
-head (DM.SO_dat.2)
 
-DM.SO_dat.3 <-  DM.SO_dat.2 %>%
-                dplyr::inner_join(ids.pheno.1, by="id.1" ) %>%
+ids.pheno.2 <- ids.pheno.1 %>%
+               dplyr::filter (lineas %in% group.feno.DMSO$genotype)
+  
+
+DM.SO_dat.3 <-  DM.SO_dat.1 %>%
+                dplyr::inner_join (ids.pheno.2, by="id.1" ) %>%
                 dplyr::select (id.1,  id , genotypes, lineas, everything())
 
 
@@ -230,21 +256,14 @@ DM.SO_dat.3  [DM.SO_dat.3  == "AB"] <- "0.5"
  
  head (DM.SO_dat.4.1)
  
- ### ingreso los datos de los datos fenotipicos ###
- 
- prev.CA.DMSO.pheno <- read_delim ( file = "./Data/procdata/prev.CA.DMSO.txt", delim =",",
-                             quote = "\"", escape_backslash = FALSE, escape_double = TRUE,
-                             col_names = TRUE, col_types = NULL, na = "NA")
- 
- head (prev.CA.DMSO.pheno)
- 
- prev.CA.DMSO.pheno.1 <- prev.CA.DMSO.pheno %>%
-                         dplyr::select (genotype, clust.tm, clust.PCA)
+ ### me quedo con las variables que voya usar para el CA
+ prev.CA.DMSO <- group.feno.DMSO %>%
+                 dplyr::select (genotype, group.tm, group.Gwtm)
  
  
  DM.SO_dat.4.2 <-  DM.SO_dat.4.1 %>%
-                   dplyr::inner_join( prev.CA.DMSO.pheno.1, by="genotype") %>%
-                   dplyr::select (genotype, clust.tm, clust.PCA, everything())
+                   dplyr::inner_join( prev.CA.DMSO, by="genotype") %>%
+                   dplyr::select (genotype, group.tm, group.Gwtm, everything())
  
 DM.SO_dat.4.2.pca <- PCA (DM.SO_dat.4.2, scale.unit = TRUE, ncp = 5, 
                             ind.sup = NULL, quanti.sup = NULL, 
@@ -345,22 +364,22 @@ DM.SO_dat.4.2.pca <- PCA (DM.SO_dat.4.2, scale.unit = TRUE, ncp = 5,
  fviz_pca_ind (DM.SO_dat.4.2.pca,
                geom.ind = "point", # show points only (nbut not "text")
                col.ind = clust.pca.pheno.G88.DMSO.G$clust, # color by groups
-               addEllipses = TRUE,
+               #addEllipses = TRUE,
                palette = c("black", "darkorange", "navyblue", "red"),
                ellipse.level=0.95,# Concentration ellipses
                legend.title = "Groups")
  
- 
+
  fviz_pca_ind (DM.SO_dat.4.2.pca,
                geom.ind = "point", # show points only (nbut not "text")
                pointsize = 2,
                col.ind = clust.pca.pheno.G88.DMSO.G$clust, # color by groups
-               addEllipses = TRUE,
-               palette = c("black", "darkorange", "navyblue", "red"),
+               #addEllipses = TRUE,
+               palette = c("black", "darkorange", "navyblue"),
                ellipse.level=0.95,# Concentration ellipses
                legend.title = "Groups")+ 
                theme_minimal()+
-               scale_shape_manual(values=c(19,19,19,19))
+               scale_shape_manual(values=c(19,17,18))
  
  
  # ordeno para  fusionar y  exportar
@@ -374,8 +393,8 @@ DM.SO_dat.4.2.pca <- PCA (DM.SO_dat.4.2, scale.unit = TRUE, ncp = 5,
  
  prev.CA.DMSO.G <- DM.SO_dat.4.2  %>%
                     dplyr::inner_join( clust.pca.G88.DMSO.G, by= "genotype") %>%
-                    dplyr::rename (clust.PCA.G = clust) %>%
-                    dplyr::select (c(genotype,clust.tm , clust.PCA, clust.PCA.G ,everything() ))
+                    dplyr::rename (clust.PCA = clust) %>%
+                    dplyr::select (c(genotype, group.tm, group.Gwtm, clust.PCA ,everything() ))
  
  
  write.table (prev.CA.DMSO.G, file = "./Data/procdata/prev.CA.DMSO.G.txt", 
@@ -389,14 +408,14 @@ DM.SO_dat.4.2.pca <- PCA (DM.SO_dat.4.2, scale.unit = TRUE, ncp = 5,
  ######## veo de armar el data frame para el CA ###
  
  prev.CA.DMSO.G.1 <- prev.CA.DMSO.G %>%
-                     dplyr::select (genotype, clust.tm, clust.PCA, clust.PCA.G ) 
+                     dplyr::select (genotype, group.tm, group.Gwtm, clust.PCA) 
                       
- 
+#### para la agrupacion con tm ########3
  prev.CA.DMSO.G.1$clust.PCA <- as.factor (prev.CA.DMSO.G.1$clust.PCA )
- prev.CA.DMSO.G.1$clust.tm <- as.factor  (prev.CA.DMSO.G.1$clust.tm )
+ prev.CA.DMSO.G.1$group.tm <- as.factor  (prev.CA.DMSO.G.1$group.tm )
  
 tm.PCApheno <-  prev.CA.DMSO.G.1 %>%
-                dplyr::group_by (clust.tm) %>%
+                dplyr::group_by (group.tm) %>%
                          count(clust.PCA) %>%
                 dplyr::ungroup()
  
@@ -415,69 +434,39 @@ summary (CA.DMSO.tm.PCApheno)
 CA.DMSO.tm.PCApheno <- CA.DMSO.tm.PCApheno %>%
                        dplyr::select (-var.factor)
 
+CA.DMSO.tm.PCApheno [3,1] <-0
 res.CA.DMSO.tm.PCApheno <- CA (CA.DMSO.tm.PCApheno, row.sup = NULL, col.sup = NULL)
 
 plot (res.CA.DMSO.tm.PCApheno, title="CA.x")
 
+#### para la agrupacion con GWtm ########3
+prev.CA.DMSO.G.1$clust.PCA <- as.factor (prev.CA.DMSO.G.1$clust.PCA )
+prev.CA.DMSO.G.1$group.Gwtm <- as.factor  (prev.CA.DMSO.G.1$group.Gwtm )
 
-### cluster tm geno #######
+Gwtm.PCApheno <- prev.CA.DMSO.G.1 %>%
+                 dplyr::group_by (group.Gwtm) %>%
+                 count(clust.PCA) %>%
+  dplyr::ungroup()
 
-tm.PCAgeno <- prev.CA.DMSO.G.1 %>%
-              dplyr::group_by (clust.tm) %>%
-              count(clust.PCA.G) %>%
-              dplyr::ungroup()
+CA.DMSO.Gwtm.PCApheno  <- Gwtm.PCApheno %>%
+                          tidyr::pivot_wider(names_from = clust.PCA, values_from = n)
 
-CA.DMSO.tm.PCAgeno  <- tm.PCAgeno %>%
-                        tidyr::pivot_wider(names_from = clust.PCA.G, values_from = n)
+colnames (CA.DMSO.Gwtm.PCApheno) <- c("var.factor", "clust.1", "clust.2", "clust.3")
 
-colnames (CA.DMSO.tm.PCAgeno) <- c("var.factor", "cmrk.1", "cmrk.2", "cmrk.3", "cmrk.4")
+CA.DMSO.Gwtm.PCApheno <- as.data.frame(CA.DMSO.Gwtm.PCApheno )
 
-CA.DMSO.tm.PCAgeno <- as.data.frame(CA.DMSO.tm.PCAgeno )
+row.names (CA.DMSO.Gwtm.PCApheno) <- CA.DMSO.Gwtm.PCApheno$var.factor
 
-row.names (CA.DMSO.tm.PCAgeno) <- CA.DMSO.tm.PCAgeno$var.factor
+summary (CA.DMSO.Gwtm.PCApheno)
 
-summary (CA.DMSO.tm.PCAgeno)
+# cluster Gwtm
+CA.DMSO.Gwtm.PCApheno <- CA.DMSO.Gwtm.PCApheno %>%
+                         dplyr::select (-var.factor)
 
-# cluster tm
-CA.DMSO.tm.PCAgeno <- CA.DMSO.tm.PCAgeno %>%
-                      dplyr::select (-var.factor)
+CA.DMSO.Gwtm.PCApheno [1,3] <-0
+res.CA.DMSO.Gwtm.PCApheno <- CA (CA.DMSO.Gwtm.PCApheno, row.sup = NULL, col.sup = NULL)
 
-res.CA.DMSO.tm.PCAgeno <- CA (CA.DMSO.tm.PCAgeno, row.sup = NULL, col.sup = NULL)
+plot (res.CA.DMSO.Gwtm.PCApheno, title="CA.x")
 
-plot (res.CA.DMSO.tm.PCAgeno, title="CA.x")
-
-### todas las variables 
-### cluster pheno geno #######
-
-PCApheno.PCAgeno <- prev.CA.DMSO.G.1 %>%
-              dplyr::group_by (clust.PCA) %>%
-              count(clust.PCA.G) %>%
-              dplyr::ungroup()
-
-CA.DMSO.PCApheno.PCAgeno <- PCApheno.PCAgeno %>%
-                              tidyr::pivot_wider(names_from = clust.PCA.G, values_from = n)
-
-CA.DMSO.PCApheno.PCAgeno <- CA.DMSO.PCApheno.PCAgeno %>%
-                            dplyr::mutate (clust.PCA = str_c ("phe", clust.PCA))
-
-
-colnames (CA.DMSO.PCApheno.PCAgeno) <- c("var.factor", "cmrk.1", "cmrk.2", "cmrk.3", "cmrk.4")
-
-CA.DMSO.PCApheno.PCAgeno <- as.data.frame (CA.DMSO.PCApheno.PCAgeno)
-
-row.names (CA.DMSO.PCApheno.PCAgeno) <- CA.DMSO.PCApheno.PCAgeno$var.factor
-
-summary (CA.DMSO.PCApheno.PCAgeno)
-
-
-CA.DMSO.PCApheno.PCAgeno <- CA.DMSO.PCApheno.PCAgeno %>%
-                            dplyr::select (-var.factor)
-
-CA.DMSO.PCApheno.PCAgeno[is.na(CA.DMSO.PCApheno.PCAgeno)] <- 0
-
-
-res.CA.DMSO.PCApheno.PCAgeno <- CA (CA.DMSO.PCApheno.PCAgeno, row.sup = NULL, col.sup = NULL)
-
-plot (res.CA.DMSO.PCApheno.PCAgeno, title="CA.x")
 
 
